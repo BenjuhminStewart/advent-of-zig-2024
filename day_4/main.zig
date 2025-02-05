@@ -44,7 +44,7 @@ fn word_search_2(input: []const u8) usize {
     for (0..ROWS) |i| {
         for (0..COLS) |j| {
             if (word_graph[i][j] == 'A') {
-                if (check_is_mas(i, j, word_graph)) {
+                if (check_x(i, j, word_graph)) {
                     count += 1;
                 }
             }
@@ -57,68 +57,74 @@ fn word_search_2(input: []const u8) usize {
 fn check(i: usize, j: usize, word_graph: [][]u8) usize {
     var count: usize = 0;
 
-    if (j + 3 < COLS and check_is_in_bounds(i, j + 3)) {
+    // check left (j -> -j)
+    if (j >= 3) {
+        const word: [4]u8 = [4]u8{ word_graph[i][j], word_graph[i][j - 1], word_graph[i][j - 2], word_graph[i][j - 3] };
+        if (word_is_xmas(&word)) {
+            count += 1;
+        }
+    }
+
+    // check right (j -> +j)
+    if (check_is_in_bounds(i, j + 3)) {
         const word: [4]u8 = [4]u8{ word_graph[i][j], word_graph[i][j + 1], word_graph[i][j + 2], word_graph[i][j + 3] };
         if (word_is_xmas(&word)) {
             count += 1;
         }
     }
 
-    if (j >= 3 and check_is_in_bounds(i, j - 3)) {
-        const word: [4]u8 = [4]u8{ word_graph[i][j], word_graph[i][j - 1], word_graph[i][j - 2], word_graph[i][j - 3] };
+    // check up (i -> -i)
+    if (i >= 3) {
+        const word: [4]u8 = [4]u8{ word_graph[i][j], word_graph[i - 1][j], word_graph[i - 2][j], word_graph[i - 3][j] };
         if (word_is_xmas(&word)) {
             count += 1;
         }
     }
-    if (i + 3 < ROWS and check_is_in_bounds(i + 3, j)) {
+
+    // check down (i -> +i)
+    if (check_is_in_bounds(i + 3, j)) {
         const word: [4]u8 = [4]u8{ word_graph[i][j], word_graph[i + 1][j], word_graph[i + 2][j], word_graph[i + 3][j] };
         if (word_is_xmas(&word)) {
             count += 1;
         }
     }
 
-    if (i >= 3 and check_is_in_bounds(i - 3, j) and check_is_in_bounds(i, j)) {
-        const word2: [4]u8 = [4]u8{ word_graph[i][j], word_graph[i - 1][j], word_graph[i - 2][j], word_graph[i - 3][j] };
-        if (word_is_xmas(&word2)) {
-            count += 1;
-        }
-    }
-
-    // check up and right
-    if (i >= 3 and check_is_in_bounds(i - 3, j + 3) and check_is_in_bounds(i, j)) {
-        const word: [4]u8 = [4]u8{ word_graph[i - 3][j + 3], word_graph[i - 2][j + 2], word_graph[i - 1][j + 1], word_graph[i][j] };
+    // check up left (i -> -i, j -> -j)
+    if (i >= 3 and j >= 3) {
+        const word: [4]u8 = [4]u8{ word_graph[i][j], word_graph[i - 1][j - 1], word_graph[i - 2][j - 2], word_graph[i - 3][j - 3] };
         if (word_is_xmas(&word)) {
             count += 1;
         }
     }
 
-    // check down and right
-    if (check_is_in_bounds(i + 3, j + 3) and check_is_in_bounds(i, j)) {
-        const word: [4]u8 = [4]u8{ word_graph[i + 3][j + 3], word_graph[i + 2][j + 2], word_graph[i + 1][j + 1], word_graph[i][j] };
+    // check up right (i -> -i, j -> +j)
+    if (i >= 3 and check_is_in_bounds(i, j + 3)) {
+        const word: [4]u8 = [4]u8{ word_graph[i][j], word_graph[i - 1][j + 1], word_graph[i - 2][j + 2], word_graph[i - 3][j + 3] };
         if (word_is_xmas(&word)) {
             count += 1;
         }
     }
 
-    // check down and left
-    if (j >= 3 and check_is_in_bounds(i + 3, j - 3) and check_is_in_bounds(i, j)) {
-        const word: [4]u8 = [4]u8{ word_graph[i + 3][j - 3], word_graph[i + 2][j - 2], word_graph[i + 1][j - 1], word_graph[i][j] };
+    // check down left (i -> +i, j -> -j)
+    if (check_is_in_bounds(i + 3, j) and j >= 3) {
+        const word: [4]u8 = [4]u8{ word_graph[i][j], word_graph[i + 1][j - 1], word_graph[i + 2][j - 2], word_graph[i + 3][j - 3] };
         if (word_is_xmas(&word)) {
             count += 1;
         }
     }
 
-    // check up and left
-    if (i >= 3 and j >= 3 and check_is_in_bounds(i - 3, j - 3) and check_is_in_bounds(i, j)) {
-        const word: [4]u8 = [4]u8{ word_graph[i - 3][j - 3], word_graph[i - 2][j - 2], word_graph[i - 1][j - 1], word_graph[i][j] };
+    // check down right (i -> +i, j -> +j)
+    if (check_is_in_bounds(i + 3, j + 3)) {
+        const word: [4]u8 = [4]u8{ word_graph[i][j], word_graph[i + 1][j + 1], word_graph[i + 2][j + 2], word_graph[i + 3][j + 3] };
         if (word_is_xmas(&word)) {
             count += 1;
         }
     }
+
     return count;
 }
 
-fn check_is_mas(i: usize, j: usize, word_graph: [][]u8) bool {
+fn check_x(i: usize, j: usize, word_graph: [][]u8) bool {
     if (i < 1 or i + 1 >= ROWS or j < 1 or j + 1 >= COLS) {
         return false;
     }
