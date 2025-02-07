@@ -16,10 +16,16 @@ const Point = struct {
     j: usize,
 };
 
+const State = struct {
+    position: Point,
+    direction: TravelingDirection,
+};
+
 const Guard = struct {
     direction: TravelingDirection = TravelingDirection.Up,
     position: Point,
     visited: std.AutoHashMap(Point, void),
+    visited_state: std.AutoHashMap(State, void),
     is_outside: bool = false,
     steps: usize = 1,
 
@@ -98,8 +104,12 @@ pub fn main() !void {
     var visited = std.AutoHashMap(Point, void).init(allocator);
     defer visited.deinit();
 
-    var guard = Guard{ .position = start_point, .visited = visited };
+    var visited_state = std.AutoHashMap(State, void).init(allocator);
+    defer visited_state.deinit();
+
+    var guard = Guard{ .position = start_point, .visited = visited, .visited_state = visited_state };
     guard.visited.put(start_point, {}) catch unreachable;
+    guard.visited_state.put(State{ .position = guard.position, .direction = guard.direction }, {}) catch unreachable;
 
     const part_1 = distinct_positions(input, &guard);
     print("part 1: {}\n", .{part_1});
@@ -131,28 +141,43 @@ fn distinct_positions(grid: [][]u8, guard: *Guard) usize {
 }
 
 fn get_perfect_obstacles(grid: [][]u8, start_point: Point) usize {
+    var perfect_obstacles: usize = 0;
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    var visited = std.AutoHashMap(Point, void).init(allocator);
-    defer visited.deinit();
+    var test_visited = std.AutoHashMap(Point, void).init(allocator);
+    defer test_visited.deinit();
+    //
+    var test_visited_state = std.AutoHashMap(State, void).init(allocator);
+    defer test_visited_state.deinit();
+    //
+    var test_guard = Guard{ .position = start_point, .visited = test_visited, .visited_state = test_visited_state };
+    test_guard.visited.put(start_point, {}) catch unreachable;
+    test_guard.visited_state.put(State{ .position = test_guard.position, .direction = test_guard.direction }, {}) catch unreachable;
+    //
+    _ = distinct_positions(grid, &test_guard);
+    //
+    var itr = test_guard.visited.iterator();
+    while (itr.next()) |kv| {
+        const i = kv.key_ptr.*.i;
+        const j = kv.key_ptr.*.j;
 
-    var perfect_obstacles: usize = 0;
-    for (grid, 0..) |row, i| {
-        for (row, 0..) |cell, j| {
-            if (cell == OBSTACLE or cell == NEW_OBSTACLE or cell == GUARD) {
-                continue;
-            }
-            var guard = Guard{ .position = start_point, .visited = visited };
-            guard.visited.put(start_point, {}) catch unreachable;
-            const contents = grid[i][j];
-            grid[i][j] = NEW_OBSTACLE;
-            if (is_guard_in_loop(grid, &guard)) {
-                perfect_obstacles += 1;
-            }
-            grid[i][j] = contents;
+        var visited = std.AutoHashMap(Point, void).init(allocator);
+        defer visited.deinit();
+
+        var visited_state = std.AutoHashMap(State, void).init(allocator);
+        defer visited_state.deinit();
+
+        var guard = Guard{ .position = start_point, .visited = visited, .visited_state = visited_state };
+        guard.visited.put(start_point, {}) catch unreachable;
+        guard.visited_state.put(State{ .position = guard.position, .direction = guard.direction }, {}) catch unreachable;
+        const contents = grid[i][j];
+        grid[i][j] = NEW_OBSTACLE;
+        if (is_guard_in_loop(grid, &guard)) {
+            perfect_obstacles += 1;
         }
+        grid[i][j] = contents;
     }
 
     return perfect_obstacles;
@@ -160,16 +185,17 @@ fn get_perfect_obstacles(grid: [][]u8, start_point: Point) usize {
 
 fn is_guard_in_loop(grid: [][]u8, guard: *Guard) bool {
     var is_in_loop = false;
-    var moves: usize = 0;
 
     while (!guard.is_outside) {
         guard.move(grid) catch {
             break;
         };
-        moves += 1;
-        if (moves > grid.len * grid[0].len) {
+        const curr_state = State{ .position = guard.position, .direction = guard.direction };
+        if (guard.visited_state.get(curr_state)) |_| {
             is_in_loop = true;
             break;
+        } else {
+            guard.visited_state.put(curr_state, {}) catch unreachable;
         }
     }
     return is_in_loop;
@@ -225,10 +251,15 @@ test "part 1" {
     var visited = std.AutoHashMap(Point, void).init(allocator);
     defer visited.deinit();
 
+    var visited_state = std.AutoHashMap(State, void).init(allocator);
+    defer visited_state.deinit();
+
     const start_point = get_starting_position(input) catch {
         return error.NoGuardFound;
     };
-    var guard = Guard{ .position = start_point, .visited = visited };
+    var guard = Guard{ .position = start_point, .visited = visited, .visited_state = visited_state };
+    guard.visited.put(start_point, {}) catch unreachable;
+    guard.visited_state.put(State{ .position = guard.position, .direction = guard.direction }, {}) catch unreachable;
 
     const expected = 41;
     const actual = distinct_positions(input, &guard);
