@@ -1,3 +1,4 @@
+// IMPORTS
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const testing = std.testing;
@@ -45,7 +46,6 @@ pub fn parse(input: []const u8) !void {
         curr_id += 1;
     }
 }
-
 pub fn build_file_system() !void {
     file_system = std.ArrayList(i64).init(alloc);
     for (disks.items) |disk| {
@@ -64,7 +64,6 @@ pub fn build_file_system() !void {
         }
     }
 }
-
 pub fn shift() void {
     var last: usize = file_system.items.len - 1;
     var empty_spots = get_empty_spots();
@@ -78,7 +77,6 @@ pub fn shift() void {
         last -= 1;
     }
 }
-
 pub fn get_checksum() i64 {
     var checksum: i64 = 0;
     for (file_system.items, 0..) |id, i| {
@@ -91,7 +89,79 @@ pub fn get_checksum() i64 {
 
     return checksum;
 }
+pub fn shift_if_enough_space() void {
+    const empty_spots = get_empty_spots_2();
+    const filled_spots = get_filled_spots();
+    var visited: std.AutoHashMap(i64, void) = std.AutoHashMap(i64, void).init(alloc);
+    var i: usize = file_system.items.len - 1;
+    while (i > 0) {
+        if (file_system.items[i] == -1) {
+            i -= 1;
+            continue;
+        }
+        const curr_id: i64 = file_system.items[i];
+        const count_of_id = filled_spots.get(curr_id) orelse 0;
+        if (visited.get(curr_id)) |_| {
+            i -= 1;
+            continue;
+        } else {
+            visited.put(curr_id, {}) catch unreachable;
+        }
+        var j: usize = 0;
+        while (j < empty_spots.items.len) : (j += 1) {
+            const spots = empty_spots.items[j].items.len;
+            if (empty_spots.items[j].items.len == 0) {
+                continue;
+            }
+            const first_empty_spot = empty_spots.items[j].items[0];
+            if (i < first_empty_spot) {
+                break;
+            }
+            if (spots >= count_of_id) {
+                var spot = first_empty_spot;
+                var spot_moving_from = i;
+                var new_empty_spots: std.ArrayList(usize) = std.ArrayList(usize).init(alloc);
+                for (first_empty_spot..first_empty_spot + count_of_id) |_| {
+                    file_system.items[spot] = curr_id;
+                    file_system.items[spot_moving_from] = -1;
+                    _ = empty_spots.items[j].orderedRemove(0);
+                    new_empty_spots.append(spot_moving_from) catch unreachable;
+                    spot_moving_from -= 1;
+                    if (empty_spots.items[j].items.len == 0) {
+                        break;
+                    }
+                    spot = empty_spots.items[j].items[0];
+                }
+                break;
+            }
+        }
+        i -= 1;
+    }
+}
+pub fn get_filled_spots() std.AutoHashMap(i64, usize) {
+    var i: usize = file_system.items.len - 1;
+    var id_to_count: std.AutoHashMap(i64, usize) = std.AutoHashMap(i64, usize).init(alloc);
+    var last_id: i64 = file_system.items[i];
+    var count: usize = 1;
+    while (i > 0) {
+        if (file_system.items[i - 1] == last_id) {
+            count += 1;
+            if (i == 1) {
+                id_to_count.put(last_id, count) catch unreachable;
+                break;
+            }
+        } else {
+            if (last_id != -1) {
+                id_to_count.put(last_id, count) catch unreachable;
+            }
+            count = 1;
+            last_id = file_system.items[i - 1];
+        }
+        i -= 1;
+    }
 
+    return id_to_count;
+}
 pub fn get_empty_spots() std.ArrayList(usize) {
     var empty_spots: std.ArrayList(usize) = std.ArrayList(usize).init(alloc);
     for (file_system.items, 0..) |file, i| {
@@ -102,7 +172,24 @@ pub fn get_empty_spots() std.ArrayList(usize) {
 
     return empty_spots;
 }
+pub fn get_empty_spots_2() std.ArrayList(std.ArrayList(usize)) {
+    var empty_spots: std.ArrayList(std.ArrayList(usize)) = std.ArrayList(std.ArrayList(usize)).init(alloc);
+    var i: usize = 0;
+    while (i < file_system.items.len) : (i += 1) {
+        var empty_spot_list: std.ArrayList(usize) = std.ArrayList(usize).init(alloc);
+        while (file_system.items[i] == -1) {
+            empty_spot_list.append(i) catch unreachable;
+            i += 1;
+        }
+        if (empty_spot_list.items.len > 0) {
+            empty_spots.append(empty_spot_list) catch unreachable;
+        } else {
+            empty_spot_list.deinit();
+        }
+    }
 
+    return empty_spots;
+}
 pub fn as_usize(self: u8) usize {
     var digit: usize = 0;
     switch (self) {
@@ -121,6 +208,7 @@ pub fn as_usize(self: u8) usize {
     return digit;
 }
 
+// RUNNER
 pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
@@ -132,6 +220,12 @@ pub fn main() !void {
 
     const checksum: i64 = get_checksum();
     print("part_1={}\n", .{checksum});
+
+    try parse(data);
+    try build_file_system();
+    shift_if_enough_space();
+    const checksum_2: i64 = get_checksum();
+    print("part_2={}\n", .{checksum_2});
 }
 
 test "part 1" {
@@ -144,9 +238,19 @@ test "part 1" {
     shift();
 
     const checksum: i64 = get_checksum();
-    print("Checksum: {}\n", .{checksum});
-
-    try testing.expectEqual(checksum, 1928);
+    const expected: i64 = 1928;
+    try testing.expectEqual(expected, checksum);
 }
+test "part 2" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    alloc = arena.allocator();
 
-test "part 2" {}
+    try parse(test_data);
+    try build_file_system();
+    shift_if_enough_space();
+
+    const checksum: i64 = get_checksum();
+    const expected: i64 = 2858;
+    try testing.expectEqual(expected, checksum);
+}
