@@ -68,14 +68,14 @@ pub fn build_file_system() !void {
 pub fn shift() void {
     var last: usize = file_system.items.len - 1;
     var empty_spots = get_empty_spots();
-    while (empty_spots.items.len > 0 and last > empty_spots.items[0]) {
+    while (last > empty_spots.items[0]) {
         if (file_system.items[last] != -1) {
             file_system.items[empty_spots.items[0]] = file_system.items[last];
             file_system.items[last] = -1;
             _ = empty_spots.orderedRemove(0);
+            empty_spots.append(last) catch unreachable;
         }
         last -= 1;
-        empty_spots = get_empty_spots();
     }
 }
 
