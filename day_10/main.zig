@@ -29,22 +29,22 @@ pub fn parse(input: []const u8) !void {
     }
 }
 
-pub fn traverse_hill(level: i32, i: i32, j: i32, visited: *std.AutoHashMap(Point, void)) usize {
+pub fn traverse_hill(level: i32, i: i32, j: i32, visited: *std.AutoHashMap(Point, void), is_part_2: bool) usize {
     if (i < 0 or j < 0 or i >= grid.items.len or j >= grid.items[0].items.len) return 0;
     const i_usize: usize = @intCast(i);
     const j_usize: usize = @intCast(j);
     if (grid.items[i_usize].items[j_usize] != level) return 0;
     const p = Point{ .i = i, .j = j };
     const has_visited: bool = visited.get(p) != null;
-    if (level == 9 and !has_visited) {
+    if (level == 9 and (!has_visited or is_part_2)) {
         visited.*.put(p, {}) catch unreachable;
         return 1;
     }
 
-    return traverse_hill(level + 1, i - 1, j, visited) +
-        traverse_hill(level + 1, i + 1, j, visited) +
-        traverse_hill(level + 1, i, j - 1, visited) +
-        traverse_hill(level + 1, i, j + 1, visited);
+    return traverse_hill(level + 1, i - 1, j, visited, is_part_2) +
+        traverse_hill(level + 1, i + 1, j, visited, is_part_2) +
+        traverse_hill(level + 1, i, j - 1, visited, is_part_2) +
+        traverse_hill(level + 1, i, j + 1, visited, is_part_2);
 }
 
 const Point = struct {
@@ -52,7 +52,7 @@ const Point = struct {
     j: i32,
 };
 
-pub fn solve() usize {
+pub fn get_score(is_part_2: bool) usize {
     var scores: usize = 0;
 
     for (grid.items, 0..) |row, i| {
@@ -62,13 +62,17 @@ pub fn solve() usize {
                 const i_i32: i32 = @intCast(i);
                 const j_i32: i32 = @intCast(j);
                 var visited = std.AutoHashMap(Point, void).init(alloc);
-                const score_at_trailhill = traverse_hill(zero, i_i32, j_i32, &visited);
+                const score_at_trailhill = traverse_hill(zero, i_i32, j_i32, &visited, is_part_2);
                 scores += score_at_trailhill;
             }
         }
     }
 
     return scores;
+}
+
+pub fn get_rating() usize {
+    return 0;
 }
 
 pub fn print_grid() void {
@@ -102,9 +106,12 @@ pub fn main() !void {
     alloc = arena.allocator();
 
     try parse(data);
-    const part_1 = solve();
-
+    const part_1 = get_score(false);
     print("part_1={}\n", .{part_1});
+
+    try parse(data);
+    const part_2 = get_score(true);
+    print("part_2={}\n", .{part_2});
 }
 
 test "part 1" {
@@ -114,9 +121,19 @@ test "part 1" {
 
     try parse(test_data);
     const expected = 36;
-    const actual = solve();
+    const actual = get_score(false);
 
     try testing.expectEqual(expected, actual);
 }
 
-test "part 2" {}
+test "part 2" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    alloc = arena.allocator();
+
+    try parse(test_data);
+    const expected = 81;
+    const actual = get_score(true);
+
+    try testing.expectEqual(expected, actual);
+}
