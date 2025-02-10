@@ -8,8 +8,7 @@ const testing = std.testing;
 var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
 var gpa = gpa_impl.allocator();
 
-var stones: std.ArrayList(u64) = undefined;
-var stone_map: std.AutoHashMap(u64, SplitStone) = undefined;
+var stones: std.AutoHashMap(u64, u64) = undefined;
 
 var alloc: Allocator = undefined;
 
@@ -19,60 +18,85 @@ const SplitStone = struct {
 };
 
 pub fn parse(input: []const u8) void {
-    stones = std.ArrayList(u64).init(alloc);
+    stones = std.AutoHashMap(u64, u64).init(alloc);
     var lines = std.mem.tokenizeSequence(u8, input, "\n");
     while (lines.next()) |line| {
         var nums = std.mem.tokenizeSequence(u8, line, " ");
         while (nums.next()) |num| {
             const stone = std.fmt.parseInt(u64, num, 10) catch unreachable;
-            stones.append(stone) catch unreachable;
+            if (!stones.contains(stone)) {
+                stones.put(stone, 0) catch unreachable;
+            }
+            stones.put(stone, stones.get(stone).? + 1) catch unreachable;
         }
     }
 }
 
-pub fn solve(blinks: usize) u64 {
-    var curr_blinks: usize = 0;
-    while (curr_blinks < blinks) {
-        var i: usize = 0;
-        while (i < stones.items.len) : (i += 1) {
-            const stone = stones.items[i];
-            if (stone == 0) {
-                stones.items[i] = 1;
-                continue;
-            }
+pub fn solve(blinks: usize) !u64 {
+    for (0..blinks) |_| {
+        var stones_dest = std.AutoHashMap(u64, u64).init(alloc);
+        defer stones_dest.deinit();
+        var it = stones.iterator();
+        while (it.next()) |entry| {
+            const k = entry.key_ptr.*;
+            const v = entry.value_ptr.*;
 
-            const length = length_of_stone(stone);
-            if (length % 2 == 0) {
-                const split_stone = split(stone, length);
-                stones.items[i] = split_stone.left;
-                stones.insert(i + 1, split_stone.right) catch unreachable;
-                i += 1;
+            if (k == 0) {
+                const t = try stones_dest.getOrPut(1);
+                if (!t.found_existing) {
+                    t.value_ptr.* = 0;
+                }
+                t.value_ptr.* += v;
                 continue;
-            } else {
-                stones.items[i] = stone * 2024;
             }
+            const digits = length_of_stone(k);
+            if (digits % 2 == 0) {
+                const split_stone = split(k, digits) catch {
+                    return error.SplitError;
+                };
+                var t = try stones_dest.getOrPut(split_stone.left);
+                if (!t.found_existing) {
+                    t.value_ptr.* = 0;
+                }
+                t.value_ptr.* += v;
+                t = try stones_dest.getOrPut(split_stone.right);
+                if (!t.found_existing) {
+                    t.value_ptr.* = 0;
+                }
+                t.value_ptr.* += v;
+                continue;
+            }
+            const t = try stones_dest.getOrPut(k * 2024);
+            if (!t.found_existing) {
+                t.value_ptr.* = 0;
+            }
+            t.value_ptr.* += v;
+            continue;
         }
-        curr_blinks += 1;
-        print("blinks={}\n", .{curr_blinks});
+        stones = stones_dest.clone() catch {
+            return error.CloneError;
+        };
     }
-
-    return stones.items.len;
+    var num_stones: u64 = 0;
+    var it = stones.iterator();
+    while (it.next()) |entry| {
+        const v = entry.value_ptr.*;
+        num_stones += v;
+    }
+    return num_stones;
 }
 
-pub fn split(stone: u64, length: u64) SplitStone {
-    var divisor: u32 = 1;
-    const half_digits: u64 = length / 2;
-    var i: u32 = 0;
-    while (i < half_digits) : (i += 1) {
-        divisor *= 10;
-    }
+pub fn split(stone: u64, length: u64) !SplitStone {
+    const half_digits = length / 2;
 
-    const first_part = stone / divisor;
-    const second_part = stone % divisor;
+    const splitter: usize = try std.math.powi(usize, 10, half_digits);
+
+    const first_num = stone / splitter;
+    const second_num = stone % splitter;
 
     return SplitStone{
-        .left = first_part,
-        .right = second_part,
+        .left = first_num,
+        .right = second_num,
     };
 }
 
@@ -80,18 +104,20 @@ pub fn length_of_stone(stone: u64) u64 {
     return std.math.log10(stone) + 1;
 }
 
-pub fn main() void {
+pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     alloc = arena.allocator();
 
     parse(data);
-    const part_1 = solve(25);
-    print("part_1={}\n", .{part_1});
+    const part_1 = solve(25) catch {
+        return error.Part1;
+    };
+    print("part_1={any}\n", .{part_1});
 
-    // parse(data);
-    // const part_2 = solve(75);
-    // print("part_2={}\n", .{part_2});
+    parse(data);
+    const part_2 = solve(75);
+    print("part_2={any}\n", .{part_2});
 }
 
 test "small" {
