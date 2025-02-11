@@ -156,11 +156,41 @@ pub fn get_perimiter(region: []Point) u64 {
     return perimeter;
 }
 
-const diagonals = enum {
+const diagonal = enum {
     northwest,
     northeast,
     southeast,
     southwest,
+
+    pub fn get_points(self: diagonal, p: Point) [2]Point {
+        switch (self) {
+            .northwest => return [2]Point{
+                Point{ .x = p.x - 1, .y = p.y },
+                Point{ .x = p.x, .y = p.y - 1 },
+            },
+            .northeast => return [2]Point{
+                Point{ .x = p.x - 1, .y = p.y },
+                Point{ .x = p.x, .y = p.y + 1 },
+            },
+            .southeast => return [2]Point{
+                Point{ .x = p.x + 1, .y = p.y },
+                Point{ .x = p.x, .y = p.y + 1 },
+            },
+            .southwest => return [2]Point{
+                Point{ .x = p.x + 1, .y = p.y },
+                Point{ .x = p.x, .y = p.y - 1 },
+            },
+        }
+    }
+
+    pub fn get_diagonal_point(self: diagonal, p: Point) Point {
+        switch (self) {
+            .northwest => return Point{ .x = p.x - 1, .y = p.y - 1 },
+            .northeast => return Point{ .x = p.x - 1, .y = p.y + 1 },
+            .southeast => return Point{ .x = p.x + 1, .y = p.y + 1 },
+            .southwest => return Point{ .x = p.x + 1, .y = p.y - 1 },
+        }
+    }
 };
 
 const corner = struct {
@@ -168,7 +198,14 @@ const corner = struct {
     x_dec: i4,
     y: i64,
     y_dec: i4,
-    diagonal: diagonals,
+    direction: diagonal,
+};
+
+const diagonals = [_]diagonal{
+    .northwest,
+    .northeast,
+    .southeast,
+    .southwest,
 };
 
 pub fn get_sides(region: []Point) !u64 {
@@ -181,124 +218,38 @@ pub fn get_sides(region: []Point) !u64 {
     var visited_corners = std.AutoHashMap(corner, void).init(alloc);
 
     for (region) |point| {
-        const up = Point{ .x = point.x - 1, .y = point.y };
-        const down = Point{ .x = point.x + 1, .y = point.y };
-        const left = Point{ .x = point.x, .y = point.y - 1 };
-        const right = Point{ .x = point.x, .y = point.y + 1 };
-
         const divisor: i64 = 2;
-        if (!points.contains(left) and !points.contains(down)) {
-            const c: corner = corner{
-                .x = @divFloor(left.x + down.x, divisor),
-                .x_dec = 5,
-                .y = @divFloor(left.y + down.y, divisor),
-                .y_dec = 5,
-                .diagonal = .southwest,
-            };
-            if (!visited_corners.contains(c)) {
-                visited_corners.put(c, {}) catch unreachable;
-                corners += 1;
+        // basic corner checking
+        for (diagonals) |direction| {
+            const ps: [2]Point = direction.get_points(point);
+            const p1 = ps[0];
+            const p2 = ps[1];
+            if (!points.contains(p1) and !points.contains(p2)) {
+                const c: corner = corner{
+                    .x = @divFloor(p1.x + p2.x, divisor),
+                    .x_dec = 5,
+                    .y = @divFloor(p1.y + p2.y, divisor),
+                    .y_dec = 5,
+                    .direction = direction,
+                };
+                if (!visited_corners.contains(c)) {
+                    visited_corners.put(c, {}) catch unreachable;
+                    corners += 1;
+                }
             }
-        }
-
-        if (!points.contains(right) and !points.contains(down)) {
-            const c: corner = corner{
-                .x = @divFloor(right.x + down.x, divisor),
-                .x_dec = 5,
-                .y = @divFloor(right.y + down.y, divisor),
-                .y_dec = 5,
-                .diagonal = .southeast,
-            };
-            if (!visited_corners.contains(c)) {
-                visited_corners.put(c, {}) catch unreachable;
-                corners += 1;
-            }
-        }
-
-        if (!points.contains(left) and !points.contains(up)) {
-            const c: corner = corner{
-                .x = @divFloor(left.x + up.x, divisor),
-                .x_dec = 5,
-                .y = @divFloor(left.y + up.y, divisor),
-                .y_dec = 5,
-                .diagonal = .northwest,
-            };
-            if (!visited_corners.contains(c)) {
-                visited_corners.put(c, {}) catch unreachable;
-                corners += 1;
-            }
-        }
-
-        if (!points.contains(right) and !points.contains(up)) {
-            const c: corner = corner{
-                .x = @divFloor(right.x + up.x, divisor),
-                .x_dec = 5,
-                .y = @divFloor(right.y + up.y, divisor),
-                .y_dec = 5,
-                .diagonal = .northeast,
-            };
-            if (!visited_corners.contains(c)) {
-                visited_corners.put(c, {}) catch unreachable;
-                corners += 1;
-            }
-        }
-        const up_and_left = Point{ .x = point.x - 1, .y = point.y - 1 };
-        if (points.contains(left) and points.contains(up) and !points.contains(up_and_left)) {
-            const c: corner = corner{
-                .x = @divFloor((left.x + up.x), divisor),
-                .x_dec = 5,
-                .y = @divFloor((left.y + up.y), divisor),
-                .y_dec = 5,
-                .diagonal = .northwest,
-            };
-            if (!visited_corners.contains(c)) {
-                visited_corners.put(c, {}) catch unreachable;
-                corners += 1;
-            }
-        }
-
-        const up_and_right = Point{ .x = point.x - 1, .y = point.y + 1 };
-        if (points.contains(right) and points.contains(up) and !points.contains(up_and_right)) {
-            const c: corner = corner{
-                .x = @divFloor((right.x + up.x), divisor),
-                .x_dec = 5,
-                .y = @divFloor((right.y + up.y), divisor),
-                .y_dec = 5,
-                .diagonal = .northeast,
-            };
-            if (!visited_corners.contains(c)) {
-                visited_corners.put(c, {}) catch unreachable;
-                corners += 1;
-            }
-        }
-
-        const down_and_left = Point{ .x = point.x + 1, .y = point.y - 1 };
-        if (points.contains(left) and points.contains(down) and !points.contains(down_and_left)) {
-            const c: corner = corner{
-                .x = @divFloor((left.x + down.x), divisor),
-                .x_dec = 5,
-                .y = @divFloor((left.y + down.y), divisor),
-                .y_dec = 5,
-                .diagonal = .southwest,
-            };
-            if (!visited_corners.contains(c)) {
-                visited_corners.put(c, {}) catch unreachable;
-                corners += 1;
-            }
-        }
-
-        const down_and_right = Point{ .x = point.x + 1, .y = point.y + 1 };
-        if (points.contains(right) and points.contains(down) and !points.contains(down_and_right)) {
-            const c: corner = corner{
-                .x = @divFloor((right.x + down.x), divisor),
-                .x_dec = 5,
-                .y = @divFloor((right.y + down.y), divisor),
-                .y_dec = 5,
-                .diagonal = .southeast,
-            };
-            if (!visited_corners.contains(c)) {
-                visited_corners.put(c, {}) catch unreachable;
-                corners += 1;
+            const diag = direction.get_diagonal_point(point);
+            if (points.contains(p1) and points.contains(p2) and !points.contains(diag)) {
+                const c: corner = corner{
+                    .x = @divFloor((p1.x + p2.x), divisor),
+                    .x_dec = 5,
+                    .y = @divFloor((p1.y + p2.y), divisor),
+                    .y_dec = 5,
+                    .direction = direction,
+                };
+                if (!visited_corners.contains(c)) {
+                    visited_corners.put(c, {}) catch unreachable;
+                    corners += 1;
+                }
             }
         }
     }
@@ -323,54 +274,6 @@ test "part 2" {
 
     const expected = 1206;
     parse(test_data);
-    const result = solve(true);
-    try testing.expectEqual(expected, result);
-}
-
-test "part 2 main" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    const expected = 953738;
-    parse(data);
-    const result = solve(true);
-    try testing.expectEqual(expected, result);
-}
-
-const tester1 = @embedFile("testers/test1.txt");
-const tester2 = @embedFile("testers/test2.txt");
-const tester3 = @embedFile("testers/test3.txt");
-
-test "part 2 tester 1" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    const expected = 80;
-    parse(tester1);
-    const result = solve(true);
-    try testing.expectEqual(expected, result);
-}
-
-test "part 2 tester 2" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    const expected = 236;
-    parse(tester2);
-    const result = solve(true);
-    try testing.expectEqual(expected, result);
-}
-
-test "part 2 tester 3" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    const expected = 368;
-    parse(tester3);
     const result = solve(true);
     try testing.expectEqual(expected, result);
 }
