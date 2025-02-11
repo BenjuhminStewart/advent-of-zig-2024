@@ -62,7 +62,7 @@ pub fn solve(is_budget: bool) u64 {
             const i_i64: i64 = @intCast(i);
             const j_i64: i64 = @intCast(j);
             build_region(value, i_i64, j_i64, &region);
-            total_price += build_fence(region.items, value, is_budget);
+            total_price += build_fence(region.items, is_budget);
         }
     }
     return total_price;
@@ -93,20 +93,19 @@ pub fn build_region(value: u8, x: i64, y: i64, region: *std.ArrayList(Point)) vo
     build_region(value, x, y - 1, region);
 }
 
-pub fn build_fence(region: []Point, value: u8, is_budget: bool) u64 {
+pub fn build_fence(region: []Point, is_budget: bool) u64 {
     if (region.len == 0) {
         return 0;
     }
-    var price: u64 = 0;
+
     var perimeter: u64 = undefined;
     if (is_budget) {
-        perimeter = get_num_sides(region) catch unreachable;
+        perimeter = get_sides(region) catch unreachable;
     } else {
-        perimeter = get_perimiter(region, value);
+        perimeter = get_perimiter(region);
     }
     const area = region.len;
-    price += area * perimeter;
-    return price;
+    return area * perimeter;
 }
 
 const directions = [_]Point{
@@ -116,26 +115,39 @@ const directions = [_]Point{
     Point{ .x = -1, .y = 0 },
 };
 
-pub fn get_perimiter(region: []Point, target: u8) u64 {
+pub fn print_region(region: []Point) void {
+    var set = std.AutoHashMap(Point, void).init(alloc);
+    defer set.deinit();
+    for (region) |point| {
+        set.put(point, {}) catch unreachable;
+    }
+
+    for (grid.items, 0..) |row, i| {
+        for (row.items, 0..) |_, j| {
+            const x: i64 = @intCast(i);
+            const y: i64 = @intCast(j);
+            const p = Point{ .x = x, .y = y };
+            const value = grid.items[i].items[j];
+            if (set.contains(p)) {
+                std.debug.print("{c}", .{value});
+            } else {
+                std.debug.print(" ", .{});
+            }
+        }
+        print("\n", .{});
+    }
+}
+
+pub fn get_perimiter(region: []Point) u64 {
+    var points = std.AutoHashMap(Point, void).init(alloc);
+    for (region) |point| {
+        points.put(point, {}) catch unreachable;
+    }
     var perimeter: u64 = 0;
-
-    const rows = grid.items.len;
-    const cols = grid.items[0].items.len;
-
     for (region) |point| {
         for (directions) |dir| {
-            const ni: i64 = point.x + dir.x;
-            const nj: i64 = point.y + dir.y;
-            const rows_i64: i64 = @intCast(rows);
-            const cols_i64: i64 = @intCast(cols);
-            if (ni < 0 or nj < 0 or ni >= rows_i64 or nj >= cols_i64) {
-                perimeter += 1;
-                continue;
-            }
-
-            const ni_usize: usize = @intCast(ni);
-            const nj_usize: usize = @intCast(nj);
-            if (grid.items[ni_usize].items[nj_usize] != target) {
+            const np = Point{ .x = point.x + dir.x, .y = point.y + dir.y };
+            if (!points.contains(np)) {
                 perimeter += 1;
             }
         }
@@ -144,16 +156,153 @@ pub fn get_perimiter(region: []Point, target: u8) u64 {
     return perimeter;
 }
 
-pub fn get_num_sides(region: []Point) !u64 {
-    _ = region;
-    return 0;
-}
+const diagonals = enum {
+    northwest,
+    northeast,
+    southeast,
+    southwest,
+};
 
-pub fn print_grid() void {
-    for (grid.items) |row| {
-        print("{s}\n", .{row.items});
+const corner = struct {
+    x: i64,
+    x_dec: i4,
+    y: i64,
+    y_dec: i4,
+    diagonal: diagonals,
+};
+
+pub fn get_sides(region: []Point) !u64 {
+    var corners: u64 = 0;
+    var points = std.AutoHashMap(Point, void).init(alloc);
+    for (region) |point| {
+        points.put(point, {}) catch unreachable;
     }
-    print("\n", .{});
+
+    var visited_corners = std.AutoHashMap(corner, void).init(alloc);
+
+    for (region) |point| {
+        const up = Point{ .x = point.x - 1, .y = point.y };
+        const down = Point{ .x = point.x + 1, .y = point.y };
+        const left = Point{ .x = point.x, .y = point.y - 1 };
+        const right = Point{ .x = point.x, .y = point.y + 1 };
+
+        const divisor: i64 = 2;
+        if (!points.contains(left) and !points.contains(down)) {
+            const c: corner = corner{
+                .x = @divFloor(left.x + down.x, divisor),
+                .x_dec = 5,
+                .y = @divFloor(left.y + down.y, divisor),
+                .y_dec = 5,
+                .diagonal = .southwest,
+            };
+            if (!visited_corners.contains(c)) {
+                visited_corners.put(c, {}) catch unreachable;
+                corners += 1;
+            }
+        }
+
+        if (!points.contains(right) and !points.contains(down)) {
+            const c: corner = corner{
+                .x = @divFloor(right.x + down.x, divisor),
+                .x_dec = 5,
+                .y = @divFloor(right.y + down.y, divisor),
+                .y_dec = 5,
+                .diagonal = .southeast,
+            };
+            if (!visited_corners.contains(c)) {
+                visited_corners.put(c, {}) catch unreachable;
+                corners += 1;
+            }
+        }
+
+        if (!points.contains(left) and !points.contains(up)) {
+            const c: corner = corner{
+                .x = @divFloor(left.x + up.x, divisor),
+                .x_dec = 5,
+                .y = @divFloor(left.y + up.y, divisor),
+                .y_dec = 5,
+                .diagonal = .northwest,
+            };
+            if (!visited_corners.contains(c)) {
+                visited_corners.put(c, {}) catch unreachable;
+                corners += 1;
+            }
+        }
+
+        if (!points.contains(right) and !points.contains(up)) {
+            const c: corner = corner{
+                .x = @divFloor(right.x + up.x, divisor),
+                .x_dec = 5,
+                .y = @divFloor(right.y + up.y, divisor),
+                .y_dec = 5,
+                .diagonal = .northeast,
+            };
+            if (!visited_corners.contains(c)) {
+                visited_corners.put(c, {}) catch unreachable;
+                corners += 1;
+            }
+        }
+        const up_and_left = Point{ .x = point.x - 1, .y = point.y - 1 };
+        if (points.contains(left) and points.contains(up) and !points.contains(up_and_left)) {
+            const c: corner = corner{
+                .x = @divFloor((left.x + up.x), divisor),
+                .x_dec = 5,
+                .y = @divFloor((left.y + up.y), divisor),
+                .y_dec = 5,
+                .diagonal = .northwest,
+            };
+            if (!visited_corners.contains(c)) {
+                visited_corners.put(c, {}) catch unreachable;
+                corners += 1;
+            }
+        }
+
+        const up_and_right = Point{ .x = point.x - 1, .y = point.y + 1 };
+        if (points.contains(right) and points.contains(up) and !points.contains(up_and_right)) {
+            const c: corner = corner{
+                .x = @divFloor((right.x + up.x), divisor),
+                .x_dec = 5,
+                .y = @divFloor((right.y + up.y), divisor),
+                .y_dec = 5,
+                .diagonal = .northeast,
+            };
+            if (!visited_corners.contains(c)) {
+                visited_corners.put(c, {}) catch unreachable;
+                corners += 1;
+            }
+        }
+
+        const down_and_left = Point{ .x = point.x + 1, .y = point.y - 1 };
+        if (points.contains(left) and points.contains(down) and !points.contains(down_and_left)) {
+            const c: corner = corner{
+                .x = @divFloor((left.x + down.x), divisor),
+                .x_dec = 5,
+                .y = @divFloor((left.y + down.y), divisor),
+                .y_dec = 5,
+                .diagonal = .southwest,
+            };
+            if (!visited_corners.contains(c)) {
+                visited_corners.put(c, {}) catch unreachable;
+                corners += 1;
+            }
+        }
+
+        const down_and_right = Point{ .x = point.x + 1, .y = point.y + 1 };
+        if (points.contains(right) and points.contains(down) and !points.contains(down_and_right)) {
+            const c: corner = corner{
+                .x = @divFloor((right.x + down.x), divisor),
+                .x_dec = 5,
+                .y = @divFloor((right.y + down.y), divisor),
+                .y_dec = 5,
+                .diagonal = .southeast,
+            };
+            if (!visited_corners.contains(c)) {
+                visited_corners.put(c, {}) catch unreachable;
+                corners += 1;
+            }
+        }
+    }
+    return corners;
 }
 
 test "part 1" {
@@ -174,6 +323,54 @@ test "part 2" {
 
     const expected = 1206;
     parse(test_data);
+    const result = solve(true);
+    try testing.expectEqual(expected, result);
+}
+
+test "part 2 main" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    alloc = arena.allocator();
+
+    const expected = 953738;
+    parse(data);
+    const result = solve(true);
+    try testing.expectEqual(expected, result);
+}
+
+const tester1 = @embedFile("testers/test1.txt");
+const tester2 = @embedFile("testers/test2.txt");
+const tester3 = @embedFile("testers/test3.txt");
+
+test "part 2 tester 1" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    alloc = arena.allocator();
+
+    const expected = 80;
+    parse(tester1);
+    const result = solve(true);
+    try testing.expectEqual(expected, result);
+}
+
+test "part 2 tester 2" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    alloc = arena.allocator();
+
+    const expected = 236;
+    parse(tester2);
+    const result = solve(true);
+    try testing.expectEqual(expected, result);
+}
+
+test "part 2 tester 3" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    alloc = arena.allocator();
+
+    const expected = 368;
+    parse(tester3);
     const result = solve(true);
     try testing.expectEqual(expected, result);
 }
