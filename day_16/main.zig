@@ -127,45 +127,6 @@ pub fn parse(input: []const u8) void {
     }
 }
 
-pub fn solve(pq: *std.PriorityQueue(CostState, void, CostState.less_than), visited: *std.AutoHashMap(State, void)) i64 {
-    while (pq.items.len > 0) {
-        const cost_state = pq.remove();
-        const state = cost_state.s;
-        const dir = state.dir;
-        const cost = cost_state.cost;
-        visited.put(state, {}) catch unreachable;
-        var travelers = std.ArrayList(CostState).init(alloc);
-
-        if (state.p.equals(end)) {
-            return cost;
-        }
-        const same_state = State.init(dir.get_next(state.p), dir);
-        const clockwise_state = State.init(state.p, dir.get_clockwise());
-        const counter_clockwise_state = State.init(state.p, dir.get_counter_clockwise());
-
-        const same_dir = CostState.init(same_state, cost + 1);
-        const clockwise = CostState.init(clockwise_state, cost + 1000);
-        const counter_clockwise = CostState.init(counter_clockwise_state, cost + 1000);
-
-        travelers.append(same_dir) catch unreachable;
-        travelers.append(clockwise) catch unreachable;
-        travelers.append(counter_clockwise) catch unreachable;
-
-        for (travelers.items) |ts| {
-            const r: usize = @intCast(ts.s.p.x);
-            const c: usize = @intCast(ts.s.p.y);
-            const nd = ts.s.dir;
-
-            if (grid.items[r].items[c] == '#') continue;
-            const ns = State.init(ts.s.p, nd);
-            if (visited.get(ns)) |_| continue;
-            pq.add(ts) catch unreachable;
-        }
-    }
-
-    return std.math.maxInt(i64);
-}
-
 pub fn print_grid() void {
     for (grid.items) |row| {
         for (row.items) |cell| {
@@ -175,29 +136,121 @@ pub fn print_grid() void {
     }
 }
 
-pub fn main() void {
+var part_1: i64 = std.math.maxInt(i64);
+pub fn solve() !void {
+    const start_state = State.init(start, .right);
+
+    var pq: std.PriorityQueue(CostState, void, CostState.less_than) = undefined;
+    defer pq.deinit();
+    pq = std.PriorityQueue(CostState, void, CostState.less_than).init(alloc, {});
+    pq.add(CostState.init(start_state, 0)) catch unreachable;
+
+    // Data Structures
+    var lowest_cost: std.AutoHashMap(State, i64) = undefined;
+    defer lowest_cost.deinit();
+    lowest_cost = std.AutoHashMap(State, i64).init(alloc);
+    lowest_cost.put(start_state, 0) catch unreachable;
+
+    var backtrack: std.AutoHashMap(State, *std.AutoHashMap(State, void)) = undefined;
+    defer backtrack.deinit();
+    backtrack = std.AutoHashMap(State, *std.AutoHashMap(State, void)).init(alloc);
+
+    var end_states: std.AutoHashMap(State, void) = undefined;
+    end_states = std.AutoHashMap(State, void).init(alloc);
+    var best_cost: i64 = std.math.maxInt(i64);
+
+    // Djikstra Loop
+    while (pq.items.len > 0) {
+        const cost_state = pq.remove();
+        const cost = cost_state.cost;
+        const r: usize = @intCast(cost_state.s.p.x);
+        const c: usize = @intCast(cost_state.s.p.y);
+        const dir: direction = cost_state.s.dir;
+        const old_state = cost_state.s;
+
+        if (cost > lowest_cost.get(cost_state.s).?) {
+            continue;
+        }
+
+        if (grid.items[r].items[c] == 'E') {
+            if (cost > best_cost) break;
+            if (cost < part_1) {
+                part_1 = cost;
+            }
+            best_cost = cost;
+            end_states.put(cost_state.s, {}) catch unreachable;
+        }
+
+        const current_dir = CostState.init(State.init(dir.get_next(cost_state.s.p), dir), cost + 1);
+        const cw = CostState.init(State.init(cost_state.s.p, dir.get_clockwise()), cost + 1000);
+        const ccw = CostState.init(State.init(cost_state.s.p, dir.get_counter_clockwise()), cost + 1000);
+
+        const travelers = [3]CostState{ current_dir, cw, ccw };
+        for (travelers) |traveler| {
+            const nr: usize = @intCast(traveler.s.p.x);
+            const nc: usize = @intCast(traveler.s.p.y);
+            if (grid.items[nr].items[nc] == '#') continue;
+
+            const new_key = State.init(traveler.s.p, traveler.s.dir);
+            const lowest = lowest_cost.get(new_key) orelse std.math.maxInt(i64);
+            if (traveler.cost > lowest) continue;
+
+            if (traveler.cost < lowest) {
+                const set = alloc.create(std.AutoHashMap(State, void)) catch unreachable;
+                set.* = std.AutoHashMap(State, void).init(alloc);
+                backtrack.put(new_key, set) catch unreachable;
+                lowest_cost.put(new_key, traveler.cost) catch unreachable;
+            }
+            backtrack.get(new_key).?.put(old_state, {}) catch unreachable;
+            try pq.add(traveler);
+        }
+    }
+
+    var states: std.ArrayList(State) = undefined;
+    states = std.ArrayList(State).init(alloc);
+
+    var seen: std.AutoHashMap(State, void) = undefined;
+    seen = std.AutoHashMap(State, void).init(alloc);
+
+    var it_end_states = end_states.iterator();
+    while (it_end_states.next()) |end_state| {
+        const state = end_state.key_ptr.*;
+        states.insert(0, state) catch unreachable;
+        seen.put(state, {}) catch unreachable;
+    }
+
+    while (states.items.len > 0) {
+        const key = states.pop();
+        if (!backtrack.contains(key)) continue;
+        var it_backtrack = backtrack.get(key).?.iterator();
+        while (it_backtrack.next()) |kv| {
+            const last = kv.key_ptr.*;
+            if (!seen.contains(last)) {
+                seen.put(last, {}) catch unreachable;
+                states.insert(0, last) catch unreachable;
+            }
+        }
+    }
+
+    var unique_states = std.AutoHashMap(Point, void).init(alloc);
+    var it_seen = seen.iterator();
+    while (it_seen.next()) |kv| {
+        const state = kv.key_ptr.*;
+        unique_states.put(state.p, {}) catch unreachable;
+    }
+
+    print("part_1={any}\n", .{part_1});
+    print("part_2={any}\n", .{unique_states.count()});
+}
+
+pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     alloc = arena.allocator();
 
     grid = std.ArrayList(std.ArrayList(u8)).init(alloc);
     parse(data);
-
-    var pq = std.PriorityQueue(CostState, void, CostState.less_than).init(alloc, {});
-    var visited = std.AutoHashMap(State, void).init(alloc);
-
-    const start_state = State{
-        .p = start,
-        .dir = .right,
-    };
-    visited.put(start_state, {}) catch unreachable;
-    pq.add(CostState{
-        .s = start_state,
-        .cost = 0,
-    }) catch unreachable;
-
-    const actual = solve(&pq, &visited);
-    print("part_1={}\n", .{actual});
+    try solve();
 }
 
 test "part 1" {
@@ -207,20 +260,5 @@ test "part 1" {
 
     grid = std.ArrayList(std.ArrayList(u8)).init(alloc);
     parse(test_data);
-
-    var pq = std.PriorityQueue(CostState, void, CostState.less_than).init(alloc, {});
-    var visited = std.AutoHashMap(State, void).init(alloc);
-
-    const start_state = State{
-        .p = start,
-        .dir = .right,
-    };
-    visited.put(start_state, {}) catch unreachable;
-    pq.add(CostState{
-        .s = start_state,
-        .cost = 0,
-    }) catch unreachable;
-
-    const actual = solve(&pq, &visited);
-    print("part_1={}\n", .{actual});
+    try solve();
 }
