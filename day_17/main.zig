@@ -3,6 +3,7 @@ const Allocator = std.mem.Allocator;
 const print = std.debug.print;
 const data = @embedFile("input.txt");
 const test_data = @embedFile("test_input.txt");
+const test_2 = @embedFile("test_2.txt");
 const testing = std.testing;
 
 var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
@@ -10,9 +11,9 @@ var gpa = gpa_impl.allocator();
 
 var alloc: Allocator = undefined;
 
-var ops: std.ArrayList(Instruction) = undefined;
-var registers: [3]i64 = [3]i64{ 0, 0, 0 };
-var output: std.ArrayList(i64) = undefined;
+var registers: [3]usize = [3]usize{ 0, 0, 0 };
+var program: std.ArrayList(usize) = undefined;
+var output: std.ArrayList(usize) = undefined;
 
 var instruction_pointer: usize = 0;
 
@@ -20,25 +21,15 @@ const A = 0;
 const B = 1;
 const C = 2;
 
-const Instruction = struct {
-    opcode: u3,
-    operand: u3,
-
-    pub fn print_self(self: Instruction) void {
-        print("opcode: {} | operand: {}\n", .{ self.opcode, self.operand });
-    }
-};
-
 pub fn parse(input: []const u8) !void {
     var lines = std.mem.tokenizeSequence(u8, input, "\n");
     var i: usize = 0;
-    var temp_instructions = std.ArrayList(u3).init(alloc);
     while (lines.next()) |line| {
         if (i < 3) {
             var curr = std.mem.tokenizeSequence(u8, line, " ");
             _ = curr.next();
             _ = curr.next();
-            const num = std.fmt.parseInt(i64, curr.next().?, 10) catch {
+            const num = std.fmt.parseInt(usize, curr.next().?, 10) catch {
                 return error.ParseError;
             };
             registers[i] = num;
@@ -50,225 +41,156 @@ pub fn parse(input: []const u8) !void {
                 if (j == 0) {
                     var first_op = std.mem.tokenizeSequence(u8, op, " ");
                     _ = first_op.next();
-                    const op_num = std.fmt.parseInt(u3, first_op.next().?, 10) catch {
+                    const op_num = std.fmt.parseInt(usize, first_op.next().?, 10) catch {
                         return error.ParseError;
                     };
-                    temp_instructions.append(op_num) catch {
+                    program.append(op_num) catch {
                         return error.ParseError;
                     };
                     j += 1;
                     continue;
                 }
-                const op_num = std.fmt.parseInt(u3, op, 10) catch {
+                const op_num = std.fmt.parseInt(usize, op, 10) catch {
                     return error.OpsError;
                 };
-                temp_instructions.append(op_num) catch {
+                program.append(op_num) catch {
                     return error.OpsError;
                 };
                 j += 1;
             }
         }
     }
-    var op_i: usize = 0;
-    while (op_i < temp_instructions.items.len) : (op_i += 2) {
-        const instruction = Instruction{
-            .opcode = temp_instructions.items[op_i],
-            .operand = temp_instructions.items[op_i + 1],
-        };
-        ops.append(instruction) catch {
-            return error.OpsError;
-        };
-    }
 }
 
-pub fn get_combo_operand(combo: u3) !i64 {
-    switch (combo) {
-        1, 2, 3 => return combo,
-        4 => return registers[A],
-        5 => return registers[B],
-        6 => return registers[C],
-        else => return error.TryingToAccessReservedOperand,
-    }
-}
-
-pub fn adv(literal: u3) !void {
-    print("ADV BEFORE: Instruction Pointer: {}", .{instruction_pointer});
-    const combo = get_combo_operand(literal) catch {
-        return error.TryingToAccessReservedOperand;
+pub fn combo(operand: usize, reg: [3]usize) usize {
+    return switch (operand) {
+        1, 2, 3 => operand,
+        4 => reg[A],
+        5 => reg[B],
+        6 => reg[C],
+        else => unreachable,
     };
-
-    const numerator = registers[A];
-    const denominator = std.math.pow(i64, 2, combo);
-
-    const result = @divTrunc(numerator, denominator);
-
-    print("dividing {} by 2^({}) = {} | Storing in A\n", .{ numerator, combo, result });
-
-    registers[A] = result;
-    instruction_pointer += 1;
-    print("ADV AFTER: Instruction Pointer: {}", .{instruction_pointer});
 }
 
-pub fn bxl(literal: u3) void {
-    const xor = registers[1] ^ literal;
-
-    print("xoring {} with {} = {} | Storing in B\n", .{ registers[B], literal, xor });
-
-    registers[B] = xor;
-    instruction_pointer += 1;
-}
-
-pub fn bst(literal: u3) !void {
-    const combo = get_combo_operand(literal) catch {
-        return error.TryingToAccessReservedOperand;
-    };
-    const result = @mod(combo, 8);
-
-    print("modding {} by 8 = {} | Storing in B\n", .{ combo, result });
-    registers[B] = result;
-    instruction_pointer += 1;
-}
-
-pub fn jnz(literal: u3) void {
-    if (registers[A] == 0) {
-        instruction_pointer += 1;
-        print("Doing Nothing because A == 0\n", .{});
-        return;
-    }
-
-    print("Jumping to instruction {}\n", .{literal});
-    instruction_pointer = literal;
-}
-
-pub fn bxc() void {
-    const result = registers[B] ^ registers[C];
-    print("xoring {} and {} = {} | Store in B\n", .{ registers[B], registers[C], result });
-    registers[B] = result;
-
-    instruction_pointer += 1;
-}
-
-pub fn out(literal: u3) !void {
-    const combo = get_combo_operand(literal) catch {
-        return error.TryingToAccessReservedOperand;
-    };
-
-    const result = @mod(combo, 8);
-    output.append(result) catch {
-        return error.OutputError;
-    };
-
-    print("Adding {} mod 8 = {} to the output list\n", .{ combo, result });
-
-    instruction_pointer += 1;
-}
-
-pub fn bdv(literal: u3) !void {
-    const combo = get_combo_operand(literal) catch {
-        return error.TryingToAccessReservedOperand;
-    };
-
-    const numerator = registers[0];
-    const denominator = std.math.pow(i64, 2, combo);
-
-    const result = @divTrunc(numerator, denominator);
-
-    print("dividing {} by 2^({}) = {} | Storing in B\n", .{ numerator, combo, result });
-
-    registers[B] = result;
-    instruction_pointer += 1;
-}
-
-pub fn cdv(literal: u3) !void {
-    const combo = get_combo_operand(literal) catch {
-        return error.TryingToAccessReservedOperand;
-    };
-
-    const numerator = registers[0];
-    const denominator = std.math.pow(i64, 2, combo);
-
-    const result = @divTrunc(numerator, denominator);
-
-    print("dividing {} by 2^({}) = {} | Storing in C\n", .{ numerator, combo, result });
-
-    registers[C] = result;
-    instruction_pointer += 1;
-}
-
-pub fn solve() !void {
-    while (instruction_pointer < ops.items.len) {
-        const instruction = ops.items[instruction_pointer];
-        const opcode = instruction.opcode;
-        const operand = instruction.operand;
-        print("registers before: {any}\n", .{registers});
-        print("instruction pointer: {}", .{instruction_pointer});
-        instruction.print_self();
+const State = struct {
+    pc: usize,
+    out: usize,
+    registers: [3]usize,
+};
+fn run(prog: []usize, a: usize) State {
+    var s = State{ .pc = 0, .out = 0, .registers = .{ a, 0, 0 } };
+    var reg = s.registers;
+    var out: usize = 0;
+    while (s.pc < prog.len) {
+        const opcode = prog[s.pc];
+        const operand = prog[s.pc + 1];
         switch (opcode) {
-            0 => adv(operand) catch {
-                return error.AdvError;
+            //adv
+            0 => {
+                const num = reg[0];
+                const denom = std.math.pow(usize, 2, combo(operand, reg));
+                reg[0] = num / denom;
             },
-            1 => bxl(operand),
-            2 => bst(operand) catch {
-                return error.BstError;
+            //bxl
+            1 => reg[1] ^= operand,
+            //bst
+            2 => reg[1] = combo(operand, reg) % 8,
+            //jnz
+            3 => {
+                s.registers = reg;
+                s.out = out;
+                if (reg[0] == 0) {
+                    s.pc += 2;
+                    return s;
+                }
+                s.pc = operand;
+                return s;
             },
-            3 => jnz(operand),
-            4 => bxc(),
-            5 => out(operand) catch {
-                return error.OutError;
+            //bxc
+            4 => reg[1] ^= reg[2],
+            //out
+            5 => out = combo(operand, reg) % 8,
+            //bdv
+            6 => {
+                const num = reg[0];
+                const denom = std.math.pow(usize, 2, combo(operand, reg));
+                reg[1] = num / denom;
             },
-            6 => bdv(operand) catch {
-                return error.BdvError;
+            //cdv
+            7 => {
+                const num = reg[0];
+                const denom = std.math.pow(usize, 2, combo(operand, reg));
+                reg[2] = num / denom;
             },
-            7 => cdv(operand) catch {
-                return error.CdvError;
-            },
+            else => unreachable,
         }
-        print("registers after: {any}\n", .{registers});
-        print_out();
+        s.pc += 2;
+    }
+    return s;
+}
+
+fn solve(prog: []usize, a: usize, offset: usize) usize {
+    if (offset == prog.len) return a;
+    for (0..8) |i| {
+        if (i == 0 and a == 0) continue;
+        const s = run(prog, a * 8 + i);
+        if (s.out == prog[prog.len - offset - 1]) {
+            const tmp = solve(prog, a * 8 + i, offset + 1);
+            if (tmp > 0) return tmp;
+        }
+    }
+    return 0;
+}
+
+pub fn part1(input: []const u8) !void {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    alloc = arena.allocator();
+
+    program = std.ArrayList(usize).init(alloc);
+    output = std.ArrayList(usize).init(alloc);
+
+    try parse(input);
+
+    var state = State{ .pc = 0, .out = 0, .registers = registers };
+    while (state.pc == 0) {
+        const new_state = run(program.items, state.registers[A]);
+        state = new_state;
+        try output.append(state.out);
+    }
+    print("part_1=", .{});
+    for (output.items, 0..) |item, i| {
+        if (i == output.items.len - 1) {
+            print("{}\n", .{item});
+        } else {
+            print("{},", .{item});
+        }
     }
 }
 
-pub fn print_out() void {
-    var i: usize = 0;
-    while (i < output.items.len) : (i += 1) {
-        if (i == output.items.len - 1) {
-            print("{}\n", .{output.items[i]});
-        } else {
-            print("{},", .{output.items[i]});
-        }
-    }
-    print("\n", .{});
+pub fn part2(input: []const u8) !void {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    alloc = arena.allocator();
+
+    program = std.ArrayList(usize).init(alloc);
+    output = std.ArrayList(usize).init(alloc);
+
+    try parse(input);
+
+    const a = solve(program.items, 0, 0);
+    print("part_2={}\n", .{a});
 }
 
 pub fn main() !void {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    ops = std.ArrayList(Instruction).init(alloc);
-    output = std.ArrayList(i64).init(alloc);
-
-    try parse(data);
-    try solve();
+    try part1(data);
+    try part2(data);
 }
 
 test "part 1" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    ops = std.ArrayList(Instruction).init(alloc);
-    output = std.ArrayList(i64).init(alloc);
-
-    try parse(test_data);
-    try solve();
-
-    const expected = [_]u3{ 4, 6, 3, 5, 6, 3, 5, 2, 1, 0 };
-    const actual = output.items;
-
-    for (expected, 0..) |expected_val, i| {
-        try testing.expectEqual(expected_val, actual[i]);
-    }
+    try part1(test_data);
 }
 
-test "part 2" {}
+test "part 2" {
+    try part2(test_2);
+}
