@@ -129,7 +129,7 @@ pub fn bfs(bytes: std.AutoArrayHashMap(Position, void)) !usize {
     var visited = std.AutoHashMap(Position, void).init(alloc);
     defer visited.deinit();
 
-    while (q.popOrNull()) |node| {
+    while (q.pop()) |node| {
         if (bytes.contains(node.position)) continue;
         if (visited.contains(node.position)) continue;
         if (node.position.equals(end)) return node.steps;
