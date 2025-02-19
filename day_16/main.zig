@@ -220,7 +220,7 @@ pub fn solve() !void {
     }
 
     while (states.items.len > 0) {
-        const key = states.pop();
+        const key = states.pop().?;
         if (!backtrack.contains(key)) continue;
         var it_backtrack = backtrack.get(key).?.iterator();
         while (it_backtrack.next()) |kv| {

@@ -131,7 +131,7 @@ pub fn find_path(from: Point, to: Point) !std.ArrayList(State) {
     var path = std.ArrayList(State).init(alloc);
     try q.insert(0, State.init(from, 0));
 
-    while (q.popOrNull()) |state| {
+    while (q.pop()) |state| {
         if (walls.contains(state.position)) continue;
         if (visited.contains(state.position)) continue;
 
