@@ -5,11 +5,12 @@ const print = std.debug.print;
 const parseInt = std.fmt.parseInt;
 
 pub fn main() !void {
+    print("\n[ Day 2 ]\n", .{});
     const safe_reports = get_safe_reports(data);
-    std.debug.print("safe_reports (PART 1) => {}\n", .{safe_reports});
+    std.debug.print("part_1={}\n", .{safe_reports});
 
     const safe_reports_with_dampener = get_safe_reports_with_dampener(data);
-    std.debug.print("safe_reports_with_dampener (PART 2) => {}\n", .{safe_reports_with_dampener});
+    std.debug.print("part_2={}\n", .{safe_reports_with_dampener});
 }
 
 fn get_safe_reports(input: []const u8) u32 {

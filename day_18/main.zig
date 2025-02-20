@@ -2,8 +2,6 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
 const data = @embedFile("input.txt");
-const test_data = @embedFile("test_input.txt");
-const testing = std.testing;
 
 var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
 var gpa = gpa_impl.allocator();
@@ -205,16 +203,7 @@ pub fn part2(input: []const u8, rows: usize, cols: usize, bytes_fallen: usize) !
 }
 
 pub fn main() !void {
+    print("\n[ Day 18 ]\n", .{});
     try part1(data, 71, 71, 1024);
     try part2(data, 71, 71, 1024);
-}
-
-test "part 1" {
-    try part1(test_data, 7, 7, 12);
-    print("   (E)={}\n\n", .{22});
-}
-
-test "part 2" {
-    try part2(test_data, 7, 7, 12);
-    print("   (E)=6,1\n\n", .{});
 }

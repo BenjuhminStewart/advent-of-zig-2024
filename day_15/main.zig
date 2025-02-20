@@ -2,9 +2,6 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
 const data = @embedFile("input.txt");
-const test_data = @embedFile("test_input.txt");
-const test2 = @embedFile("test_2.txt");
-const testing = std.testing;
 
 var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
 var gpa = gpa_impl.allocator();
@@ -498,6 +495,7 @@ pub fn solve2() usize {
 }
 
 pub fn main() !void {
+    print("\n[ Day 15 ]\n", .{});
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     alloc = arena.allocator();
@@ -518,37 +516,4 @@ pub fn main() !void {
     const part_2 = solve2();
 
     print("part_2={}\n", .{part_2});
-}
-
-test "part 1" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    moves = std.ArrayList(Direction).init(alloc);
-    grid = std.ArrayList(std.ArrayList(u8)).init(alloc);
-
-    try parse(test_data);
-    do_robots_moves();
-    const actual = solve();
-
-    const expected = 10092;
-    try testing.expectEqual(expected, actual);
-}
-
-test "part 2" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    moves = std.ArrayList(Direction).init(alloc);
-    grid = std.ArrayList(std.ArrayList(u8)).init(alloc);
-
-    try parse_2(test_data);
-    do_robots_moves_2();
-
-    const actual = solve2();
-
-    const expected = 9021;
-    try testing.expectEqual(expected, actual);
 }

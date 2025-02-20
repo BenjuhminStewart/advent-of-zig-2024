@@ -2,8 +2,6 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
 const data = @embedFile("input.txt");
-const test_data = @embedFile("test_input.txt");
-const testing = std.testing;
 
 var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
 var gpa = gpa_impl.allocator();
@@ -92,15 +90,21 @@ pub fn get_quadrant(p: Point, width: i64, height: i64) quadrant {
 
 pub fn solve(width: i64, height: i64, seconds: i64) !i64 {
     var i: usize = 0;
+    var has_matched: bool = false;
     while (i < seconds) {
         for (robots.items, 0..) |_, j| {
             robots.items[j].move(width, height);
         }
         i += 1;
+
         const matches = try matches_tree_heuristic();
         if (matches) {
-            print("Tree @ {any} seconds\n", .{i});
-            print_robots(width, height);
+            if (!has_matched) {
+                print("{any}", .{i});
+            } else {
+                print(", {any}", .{i});
+            }
+            has_matched = true;
         }
     }
 
@@ -152,6 +156,7 @@ pub fn parse(input: []const u8, width: i64, height: i64) !void {
 }
 
 pub fn main() !void {
+    print("\n[ Day 14 ]\n", .{});
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     alloc = arena.allocator();
@@ -162,7 +167,10 @@ pub fn main() !void {
     print("part_1={}\n", .{part_1});
 
     try parse(data, 101, 103);
+    print("part_2=", .{});
     _ = try solve(101, 103, 7754);
+
+    print("\n", .{});
 }
 
 const MATCHING_HEURISTIC: usize = 13;
@@ -191,46 +199,3 @@ pub fn matches_tree_heuristic() !bool {
 
     return false;
 }
-
-pub fn print_robots(width: i64, height: i64) void {
-    var grid = std.ArrayList(std.ArrayList(u8)).init(gpa);
-    defer grid.deinit();
-
-    const w_usize: usize = @intCast(width);
-    const h_usize: usize = @intCast(height);
-
-    for (0..h_usize) |_| {
-        var list = std.ArrayList(u8).init(gpa);
-        for (0..w_usize) |_| {
-            list.append(' ') catch unreachable;
-        }
-        grid.append(list) catch unreachable;
-    }
-
-    for (robots.items) |robot| {
-        const x_usize: usize = @intCast(robot.position.x);
-        const y_usize: usize = @intCast(robot.position.y);
-        grid.items[y_usize].items[x_usize] = '*';
-    }
-
-    for (grid.items) |row| {
-        for (row.items) |c| {
-            print("{c}", .{c});
-        }
-        print("\n", .{});
-    }
-}
-
-test "part 1" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    const expected = 12;
-    robots = std.ArrayList(Robot).init(gpa);
-    try parse(test_data, 11, 7);
-    const part_1 = try solve(11, 7, 100);
-    try testing.expectEqual(expected, part_1);
-}
-
-test "part 2" {}

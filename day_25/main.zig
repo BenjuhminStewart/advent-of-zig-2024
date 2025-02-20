@@ -84,6 +84,7 @@ pub fn part1() void {
 }
 
 pub fn part2() void {
+    print("part_2=NONE!", .{});
     print("\n🎉 AoC 2024 Complete! 🎉", .{});
 }
 
@@ -91,7 +92,7 @@ pub fn main() void {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     alloc = arena.allocator();
-    print("[ Day 25 ]", .{});
+    print("\n[ Day 25 ]", .{});
 
     parse(data);
     part1();

@@ -7,10 +7,11 @@ const ROWS = 140;
 const COLS = 140;
 
 pub fn main() void {
+    print("\n[ Day 4 ]\n", .{});
     const count = word_search(data);
-    std.debug.print("part 1: {}\n", .{count});
+    std.debug.print("part_1={}\n", .{count});
     const count2 = word_search_2(data);
-    std.debug.print("part 2: {}\n", .{count2});
+    std.debug.print("part_2={}\n", .{count2});
 }
 
 fn word_search(input: []const u8) usize {

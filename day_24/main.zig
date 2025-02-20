@@ -1,9 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const data = @embedFile("input.txt");
-const test_data = @embedFile("test_input.txt");
-const test_data_2 = @embedFile("test_input_2.txt");
-const testing = std.testing;
 
 const verbose = false;
 fn log(comptime s: []const u8, args: anytype) void {
@@ -279,7 +276,7 @@ pub fn main() !void {
     position_hash = std.AutoHashMap(@Vector(2, u32), bool).init(alloc);
     ret = std.ArrayList([]const u8).init(alloc);
 
-    print("[ Day 24 ]", .{});
+    print("\n[ Day 24 ]", .{});
     part1(data);
     try part2();
 }

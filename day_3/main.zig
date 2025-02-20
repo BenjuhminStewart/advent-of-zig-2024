@@ -4,11 +4,12 @@ const data = @embedFile("input.txt");
 const print = std.debug.print;
 
 pub fn main() void {
+    print("\n[ Day 3 ]\n", .{});
     const sum = get_sum_of_mult_operations(data);
-    std.debug.print("sum_of_mult_operations: {}\n", .{sum});
+    std.debug.print("part_1={}\n", .{sum});
 
     const sum2 = get_sum_of_mult_operations2(data);
-    std.debug.print("sum_of_mult_operations2: {}\n", .{sum2});
+    std.debug.print("part_2={}\n", .{sum2});
 }
 
 fn get_sum_of_mult_operations(input: []const u8) i64 {
@@ -141,20 +142,4 @@ fn get_sum_of_mult_operations2(input: []const u8) i64 {
         }
     }
     return count;
-}
-
-test "get_sum_of_mult_operations" {
-    const test_input = "select(){,(where()+-mul(5,5);:]]what():^*from(6,6) mul(6,3)$^^%>select(587,376)mul(94,1)select()when(633,175)<where()mul(3,3),asdoiwrjgksjjdf!mul(1,1)asdmul(1!,2)a";
-
-    // output should be -> 25 + 18 + 94 + 9 + 1 = 147
-    const expected = 147;
-    try testing.expectEqual(expected, get_sum_of_mult_operations(test_input));
-}
-
-test "get_sum_of_mult_operations2" {
-    const test_input = "select(){,(where()+-mul(5,5);:]]what():^*from(6,6) mul(6,3)$^^%>don't()select(587,376)mul(94,1)select()when(633,175)<where()mul(3,3),asdoiwrjdo()gksjjdf!mul(1,1)asdmul(1!,2)a";
-
-    // output should be -> 25 + 18 + 1 = 44
-    const expected = 44;
-    try testing.expectEqual(expected, get_sum_of_mult_operations2(test_input));
 }

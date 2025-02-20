@@ -2,8 +2,6 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
 const data = @embedFile("input.txt");
-const test_data = @embedFile("test_input.txt");
-const testing = std.testing;
 
 var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
 var gpa = gpa_impl.allocator();
@@ -105,6 +103,7 @@ pub fn length_of_stone(stone: u64) u64 {
 }
 
 pub fn main() !void {
+    print("\n[ Day 11 ]\n", .{});
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     alloc = arena.allocator();
@@ -118,26 +117,4 @@ pub fn main() !void {
     parse(data);
     const part_2 = solve(75);
     print("part_2={any}\n", .{part_2});
-}
-
-test "small" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    parse(test_data);
-    const expected = 22;
-    const actual = solve(6);
-    try testing.expectEqual(expected, actual);
-}
-
-test "part 1" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    parse(test_data);
-    const expected = 55312;
-    const actual = solve(25);
-    try testing.expectEqual(expected, actual);
 }

@@ -196,7 +196,7 @@ pub fn part2(input: []const u8) void {
 }
 
 pub fn main() void {
-    print("[ Day 23 ]", .{});
+    print("\n[ Day 23 ]", .{});
     part1(data);
     part2(data);
 }

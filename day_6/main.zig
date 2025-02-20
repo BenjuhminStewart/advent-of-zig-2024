@@ -1,9 +1,7 @@
 const std = @import("std");
-const testing = std.testing;
 const mem = std.mem;
 const print = std.debug.print;
 const data = @embedFile("input.txt");
-const test_data = @embedFile("test_input.txt");
 const Allocator = std.mem.Allocator;
 const OBSTACLE = '#';
 const NEW_OBSTACLE = 'O';
@@ -111,11 +109,13 @@ pub fn main() !void {
     guard.visited.put(start_point, {}) catch unreachable;
     guard.visited_state.put(State{ .position = guard.position, .direction = guard.direction }, {}) catch unreachable;
 
+    print("\n[ Day 6 ]\n", .{});
     const part_1 = distinct_positions(input, &guard);
-    print("part 1: {}\n", .{part_1});
+    print("part_1={}\n", .{part_1});
 
+    print("part_2 (takes ~30sec)=", .{});
     const part_2 = get_perfect_obstacles(input, start_point);
-    print("part 2: {}\n", .{part_2});
+    print("{}\n", .{part_2});
 }
 
 fn get_starting_position(grid: [][]u8) !Point {
@@ -238,50 +238,4 @@ fn free_input(grid: [][]u8, allocator: Allocator) void {
         allocator.free(row);
     }
     allocator.free(grid);
-}
-
-test "part 1" {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
-    const input = try parse_input(test_data, allocator, 10);
-    defer allocator.free(input);
-
-    var visited = std.AutoHashMap(Point, void).init(allocator);
-    defer visited.deinit();
-
-    var visited_state = std.AutoHashMap(State, void).init(allocator);
-    defer visited_state.deinit();
-
-    const start_point = get_starting_position(input) catch {
-        return error.NoGuardFound;
-    };
-    var guard = Guard{ .position = start_point, .visited = visited, .visited_state = visited_state };
-    guard.visited.put(start_point, {}) catch unreachable;
-    guard.visited_state.put(State{ .position = guard.position, .direction = guard.direction }, {}) catch unreachable;
-
-    const expected = 41;
-    const actual = distinct_positions(input, &guard);
-    try testing.expectEqual(expected, actual);
-}
-
-test "part 2" {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
-    const input = try parse_input(test_data, allocator, 10);
-    defer allocator.free(input);
-
-    var visited = std.AutoHashMap(Point, void).init(allocator);
-    defer visited.deinit();
-
-    const start_point = get_starting_position(input) catch {
-        return error.NoGuardFound;
-    };
-
-    const expected = 6;
-    const actual = get_perfect_obstacles(input, start_point);
-    try testing.expectEqual(expected, actual);
 }

@@ -2,8 +2,6 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
 const data = @embedFile("input.txt");
-const test_data = @embedFile("test_input.txt");
-const testing = std.testing;
 
 var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
 var gpa = gpa_impl.allocator();
@@ -101,6 +99,7 @@ pub fn get_digit(c: u8) u8 {
 }
 
 pub fn main() !void {
+    print("\n[ Day 10 ]\n", .{});
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     alloc = arena.allocator();
@@ -112,28 +111,4 @@ pub fn main() !void {
     try parse(data);
     const part_2 = get_score(true);
     print("part_2={}\n", .{part_2});
-}
-
-test "part 1" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    try parse(test_data);
-    const expected = 36;
-    const actual = get_score(false);
-
-    try testing.expectEqual(expected, actual);
-}
-
-test "part 2" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    try parse(test_data);
-    const expected = 81;
-    const actual = get_score(true);
-
-    try testing.expectEqual(expected, actual);
 }

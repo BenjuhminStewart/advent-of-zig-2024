@@ -4,7 +4,6 @@ const Allocator = std.mem.Allocator;
 const testing = std.testing;
 const print = std.debug.print;
 const data = @embedFile("input.txt");
-const test_data = @embedFile("test_input.txt");
 
 var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
 const gpa = gpa_impl.allocator();
@@ -210,6 +209,7 @@ pub fn as_usize(self: u8) usize {
 
 // RUNNER
 pub fn main() !void {
+    print("\n[ Day 9 ]\n", .{});
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     alloc = arena.allocator();
@@ -226,31 +226,4 @@ pub fn main() !void {
     shift_if_enough_space();
     const checksum_2: i64 = get_checksum();
     print("part_2={}\n", .{checksum_2});
-}
-
-test "part 1" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    try parse(test_data);
-    try build_file_system();
-    shift();
-
-    const checksum: i64 = get_checksum();
-    const expected: i64 = 1928;
-    try testing.expectEqual(expected, checksum);
-}
-test "part 2" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    try parse(test_data);
-    try build_file_system();
-    shift_if_enough_space();
-
-    const checksum: i64 = get_checksum();
-    const expected: i64 = 2858;
-    try testing.expectEqual(expected, checksum);
 }

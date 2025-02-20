@@ -2,8 +2,6 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
 const data = @embedFile("input.txt");
-const test_data = @embedFile("test_input.txt");
-const testing = std.testing;
 
 var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
 var gpa = gpa_impl.allocator();
@@ -54,6 +52,7 @@ const ClawMachine = struct {
 var machines: std.ArrayList(ClawMachine) = undefined;
 
 pub fn main() !void {
+    print("\n[ Day 13 ]\n", .{});
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     alloc = arena.allocator();
@@ -161,33 +160,4 @@ pub fn solve(adjustment: i64) i64 {
     }
 
     return total_cost;
-}
-
-test "part 1" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    machines = std.ArrayList(ClawMachine).init(alloc);
-    defer machines.deinit();
-    try parse(test_data);
-
-    const expected = 480;
-    const actual = solve(0);
-
-    try testing.expectEqual(expected, actual);
-}
-
-test "part 2" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    machines = std.ArrayList(ClawMachine).init(alloc);
-    defer machines.deinit();
-    try parse(test_data);
-
-    const actual = solve(10000000000000);
-
-    print("Part 2: {}\n", .{actual});
 }

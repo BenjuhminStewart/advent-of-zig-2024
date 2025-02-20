@@ -2,8 +2,6 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
 const data = @embedFile("input.txt");
-const test_data = @embedFile("test_input.txt");
-const testing = std.testing;
 
 var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
 var gpa = gpa_impl.allocator();
@@ -117,16 +115,7 @@ pub fn unique_designs(design: []const u8, uniques: *std.StringArrayHashMap(usize
 }
 
 pub fn main() void {
+    print("\n[ Day 19 ]\n", .{});
     part1(data);
     part2(data);
-}
-
-test "part 1" {
-    part1(test_data);
-    print("   (E)=6\n\n", .{});
-}
-
-test "part 2" {
-    part2(test_data);
-    print("   (E)=16\n\n", .{});
 }

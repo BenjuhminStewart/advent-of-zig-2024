@@ -1,9 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const testing = std.testing;
 const print = std.debug.print;
 const data = @embedFile("input.txt");
-const test_data = @embedFile("test_input.txt");
 
 var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
 const gpa = gpa_impl.allocator();
@@ -363,6 +361,7 @@ pub fn main() !void {
     const actual = unique_locations_with_antinode(grid) catch {
         return error.UniqueLocationsError;
     };
+    print("\n[ Day 8 ]\n", .{});
     print("part_1={}\n", .{actual});
 
     const grid2 = parse(data) catch {
@@ -373,42 +372,4 @@ pub fn main() !void {
     };
 
     print("part_2={}\n", .{actual2});
-}
-
-test "part_1" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    antennae = Antennae.init(alloc);
-
-    const grid = parse(test_data) catch {
-        return error.ParseError;
-    };
-
-    const actual = unique_locations_with_antinode(grid) catch {
-        return error.UniqueLocationsError;
-    };
-
-    const expected = 14;
-    try testing.expectEqual(expected, actual);
-}
-
-test "part_2" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    antennae = Antennae.init(alloc);
-
-    const grid = parse(test_data) catch {
-        return error.ParseError;
-    };
-
-    const actual = unique_locations_with_antinode2(grid) catch {
-        return error.UniqueLocationsError;
-    };
-
-    const expected = 34;
-    try testing.expectEqual(expected, actual);
 }

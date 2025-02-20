@@ -97,6 +97,6 @@ pub fn solve(input: []const u8) !void {
 }
 
 pub fn main() !void {
-    print("[ Day 22 ]\n", .{});
+    print("\n[ Day 22 ]\n", .{});
     try solve(data);
 }

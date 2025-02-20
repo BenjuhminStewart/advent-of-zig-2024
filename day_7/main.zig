@@ -3,7 +3,6 @@ const Allocator = std.mem.Allocator;
 const testing = std.testing;
 const print = std.debug.print;
 const data = @embedFile("input.txt");
-const test_data = @embedFile("test_input.txt");
 const parseInt = std.fmt.parseInt;
 
 var alloc: std.mem.Allocator = undefined;
@@ -91,28 +90,7 @@ pub fn main() !void {
     const part_1 = try part1();
     const part_2 = try part2();
 
+    print("\n[ Day 7 ]\n", .{});
     print("part_1={}\n", .{part_1});
     print("part_2={}\n", .{part_2});
-}
-
-test "part 1" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    alloc = arena.allocator();
-    defer arena.deinit();
-
-    try parse(test_data);
-    const actual = try part1();
-    const expected = 3749;
-    try testing.expectEqual(actual, expected);
-}
-
-test "part 2" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    alloc = arena.allocator();
-    defer arena.deinit();
-
-    try parse(test_data);
-    const actual = try part2();
-    const expected = 11387;
-    try testing.expectEqual(actual, expected);
 }

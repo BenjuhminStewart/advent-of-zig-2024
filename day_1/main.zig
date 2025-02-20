@@ -11,6 +11,7 @@ const gpa = gpa_impl.allocator();
 var alloc: std.mem.Allocator = undefined;
 
 pub fn main() !void {
+    print("\n[ Day 1 ]\n", .{});
     try part1();
     try part2();
 }
@@ -26,7 +27,7 @@ pub fn part1() !void {
     try parse();
 
     const part_1 = getDistance();
-    print("part 1: {d}\n", .{part_1});
+    print("part_1={d}\n", .{part_1});
 }
 
 pub fn part2() !void {
@@ -40,7 +41,7 @@ pub fn part2() !void {
     try parse();
 
     const part_2 = getSimilarityScore();
-    print("part 2: {d}\n", .{part_2});
+    print("part_2={d}\n", .{part_2});
 }
 
 var left: std.ArrayList(i32) = undefined;

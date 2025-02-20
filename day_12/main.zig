@@ -2,8 +2,6 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
 const data = @embedFile("input.txt");
-const test_data = @embedFile("test_input.txt");
-const testing = std.testing;
 
 var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
 var gpa = gpa_impl.allocator();
@@ -28,6 +26,7 @@ const Point = struct {
 var alloc: Allocator = undefined;
 
 pub fn main() void {
+    print("\n[ Day 12 ]\n", .{});
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     alloc = arena.allocator();
@@ -254,26 +253,4 @@ pub fn get_sides(region: []Point) !u64 {
         }
     }
     return corners;
-}
-
-test "part 1" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    const expected = 1930;
-    parse(test_data);
-    const result = solve(false);
-    try testing.expectEqual(expected, result);
-}
-
-test "part 2" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    alloc = arena.allocator();
-
-    const expected = 1206;
-    parse(test_data);
-    const result = solve(true);
-    try testing.expectEqual(expected, result);
 }

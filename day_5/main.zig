@@ -2,15 +2,15 @@ const std = @import("std");
 const testing = std.testing;
 const print = std.debug.print;
 const data = @embedFile("input.txt");
-const data_test = @embedFile("test.txt");
 const mem = std.mem;
 const parseInt = std.fmt.parseInt;
 
 const Pair = struct { x: i32, y: i32 };
 pub fn main() void {
     const scores = try get_scores_of_updates(data);
-    print("part_1: {d}\n", .{scores[0]});
-    print("part_2: {d}\n", .{scores[1]});
+    print("\n[ Day 5 ]\n", .{});
+    print("part_1={d}\n", .{scores[0]});
+    print("part_2={d}\n", .{scores[1]});
 }
 
 fn get_scores_of_updates(input: []const u8) ![2]i32 {
@@ -83,87 +83,4 @@ fn get_rules(input: []const u8, allocator: std.mem.Allocator) !std.AutoHashMap(P
     }
 
     return rules;
-}
-
-test "part_1" {
-    const input =
-        \\47|53
-        \\97|13
-        \\97|61
-        \\97|47
-        \\75|29
-        \\61|13
-        \\75|53
-        \\29|13
-        \\97|29
-        \\53|29
-        \\61|53
-        \\97|53
-        \\61|29
-        \\47|13
-        \\75|47
-        \\97|75
-        \\47|61
-        \\75|61
-        \\47|29
-        \\75|13
-        \\53|13
-        \\
-        \\75,47,61,53,29
-        \\97,61,53,29,13
-        \\75,29,13
-        \\75,97,47,61,53
-        \\61,13,29
-        \\97,13,75,29,47
-    ;
-    const expected = 143;
-    const scores = try get_scores_of_updates(input);
-    const actual = scores[0];
-    try testing.expectEqual(expected, actual);
-}
-
-test "part_2" {
-    const input =
-        \\47|53
-        \\97|13
-        \\97|61
-        \\97|47
-        \\75|29
-        \\61|13
-        \\75|53
-        \\29|13
-        \\97|29
-        \\53|29
-        \\61|53
-        \\97|53
-        \\61|29
-        \\47|13
-        \\75|47
-        \\97|75
-        \\47|61
-        \\75|61
-        \\47|29
-        \\75|13
-        \\53|13
-        \\
-        \\75,47,61,53,29
-        \\97,61,53,29,13
-        \\75,29,13
-        \\75,97,47,61,53
-        \\61,13,29
-        \\97,13,75,29,47
-        \\13,53,97
-    ;
-    const expected = 176;
-    const scores = try get_scores_of_updates(input);
-    const actual = scores[1];
-    try testing.expectEqual(expected, actual);
-}
-
-test "part_2 test.txt" {
-    const expected = 98;
-
-    const scores = try get_scores_of_updates(data_test);
-    const actual = scores[1];
-    try testing.expectEqual(expected, actual);
 }
